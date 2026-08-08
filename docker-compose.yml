@@ -1,0 +1,53 @@
+services:
+  redis:
+    image: redis:7
+    container_name: job-queue-redis
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+
+    container_name: job-queue-api
+
+    depends_on:
+      - redis
+
+    ports:
+      - "3000:3000"
+
+    env_file:
+      - .env
+
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+    command: npm run dev
+
+  worker:
+    build: .
+
+    container_name: job-queue-worker
+
+    depends_on:
+      - redis
+
+    env_file:
+      - .env
+
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+    command: npm run worker

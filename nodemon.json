@@ -1,0 +1,11 @@
+{
+    "watch": [
+        "."
+    ],
+    "ext": "js,json",
+    "legacyWatch": true,
+    "ignore": [
+        "node_modules",
+        ".git"
+    ]
+}
