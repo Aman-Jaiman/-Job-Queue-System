@@ -1,7 +1,13 @@
 import { Router } from "express";
 import authenticate from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
-import { pauseQueue , resumeQueue, emptyQueue, queueStats} from "../controllers/queue.controller.js";
+import {
+  pauseQueue,
+  resumeQueue,
+  emptyQueue,
+  queueStats,
+} from "../controllers/queue.controller.js";
+import { apiRateLimit } from "../middleware/rateLimits.js";
 
 const router = Router();
 
@@ -20,10 +26,7 @@ const router = Router();
  */
 
 /* Protect all DLQ routes */
-router.use(
-    authenticate,
-    authorize("admin")
-);
+router.use(authenticate, apiRateLimit, authorize("admin"));
 
 router.post("/pause", pauseQueue);
 

@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { addEmailJob } from "../controllers/email.controller.js";
+import authenticate from "../middleware/auth.middleware.js";
 import validate from "../middleware/validate.js";
 import emailSchema from "../validators/email.validator.js";
+import { emailRateLimit } from "../middleware/rateLimits.js";
 
 const router = Router();
 
@@ -42,9 +44,11 @@ const router = Router();
  *         description: Email job added successfully
  */
 router.post(
-    "/",
-    validate(emailSchema),
-    addEmailJob
+  "/",
+  authenticate,
+  emailRateLimit,
+  validate(emailSchema),
+  addEmailJob,
 );
 
 export default router;

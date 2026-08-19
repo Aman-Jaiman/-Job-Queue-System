@@ -1,31 +1,26 @@
 import emailQueue from "../queues/email.queue.js";
+import config from "../config/env.js";
+import logger from "../config/logger.js";
 
 async function startEmailScheduler() {
+  const repeatOptions = {
+    pattern: config.scheduler.reportSchedule,
+  };
 
-    await emailQueue.upsertJobScheduler(
-        "daily-report",
-        {
-            pattern: "*/1 * * * *"
-        },
-        {
-            name: "daily-report",
-            data: {
-                type: "report"
-            }
-        }
-    );
+  if (config.scheduler.timezone) {
+    repeatOptions.tz = config.scheduler.timezone;
+  }
 
-    console.log("Email Scheduler Started");
+  await emailQueue.upsertJobScheduler("daily-report", repeatOptions, {
+    name: "daily-report",
+    data: {
+      type: "report",
+    },
+  });
+
+  logger.info(
+    `Daily report scheduler configured: ${config.scheduler.reportSchedule}`,
+  );
 }
 
 export default startEmailScheduler;
-
-
-
-// | Pattern       | Meaning           |
-// | ------------- | ----------------- |
-// | `*/1 * * * *` | Every minute      |
-// | `*/5 * * * *` | Every 5 minutes   |
-// | `0 * * * *`   | Every hour        |
-// | `0 9 * * *`   | Every day at 9 AM |
-// | `0 0 * * 0`   | Every Sunday      |

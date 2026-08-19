@@ -1,7 +1,14 @@
 import { Router } from "express";
 import authenticate from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
-import { getJob, getJobState, deleteJob, retryJob, getAllJobs } from "../controllers/jobs.controller.js";
+import { apiRateLimit } from "../middleware/rateLimits.js";
+import {
+  getJob,
+  getJobState,
+  deleteJob,
+  retryJob,
+  getAllJobs,
+} from "../controllers/jobs.controller.js";
 
 const router = Router();
 
@@ -19,37 +26,32 @@ const router = Router();
  *         description: List of all jobs
  */
 
+router.get("/", authenticate, apiRateLimit, authorize("admin"), getAllJobs);
+
+router.get("/:id", authenticate, apiRateLimit, authorize("admin"), getJob);
 
 router.get(
-    "/",
-    authenticate,
-    authorize("admin"),
-    getAllJobs
+  "/:id/state",
+  authenticate,
+  apiRateLimit,
+  authorize("admin"),
+  getJobState,
 );
 
-router.get("/:id",
-    authenticate,
-    authorize("admin"),
-    getJob
+router.delete(
+  "/:id",
+  authenticate,
+  apiRateLimit,
+  authorize("admin"),
+  deleteJob,
 );
 
-router.get("/:id/state",
-    authenticate,
-    authorize("admin"),
-    getJobState
+router.post(
+  "/:id/retry",
+  authenticate,
+  apiRateLimit,
+  authorize("admin"),
+  retryJob,
 );
-
-router.delete("/:id",
-    authenticate,
-    authorize("admin"),
-    deleteJob
-);
-
-router.post("/:id/retry",
-    authenticate,
-    authorize("admin"),
-    retryJob
-);
-
 
 export default router;

@@ -1,34 +1,29 @@
 import emailQueue from "../queues/email.queue.js";
+import redis from "../config/redis.js";
 import { getWorkerMetrics } from "../services/monitor/monitor.service.js";
 
 export const getMonitor = async (req, res, next) => {
+  try {
+    const counts = await emailQueue.getJobCounts(
+      "waiting",
+      "active",
+      "completed",
+      "failed",
+      "delayed",
+    );
 
-    try {
+    return res.status(200).json({
+      success: true,
 
-        const counts = await emailQueue.getJobCounts(
-            "waiting",
-            "active",
-            "completed",
-            "failed",
-            "delayed"
-        );
+      queue: counts,
 
-        return res.status(200).json({
+      worker: getWorkerMetrics(),
 
-            success: true,
-
-            queue: counts,
-
-            worker: getWorkerMetrics(),
-
-            redis: {
-                status: "connected",
-            }
-
-        });
-
-    } catch (error) {
-        next(error);
-    }
-
+      redis: {
+        status: redis.status === "ready" ? "connected" : "disconnected",
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 };

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authenticate from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
+import { apiRateLimit } from "../middleware/rateLimits.js";
 import { getAnalytics } from "../controllers/analytics.controller.js";
 
 const router = Router();
@@ -27,10 +28,7 @@ const router = Router();
  */
 
 /* Protect all DLQ routes */
-router.use(
-    authenticate,
-    authorize("admin")
-);
+router.use(authenticate, apiRateLimit, authorize("admin"));
 
 router.get("/", getAnalytics);
 

@@ -1,20 +1,19 @@
 import { Router } from "express";
 import authenticate from "../middleware/auth.middleware.js";
 import authorize from "../middleware/role.middleware.js";
-import { getDLQ ,
-     getDLQStatistics,
-     getDLQJobById,
-     retryDLQ,
-     deleteDLQ  } from "../controllers/dlq.controller.js";
+import { apiRateLimit } from "../middleware/rateLimits.js";
+import {
+  getDLQ,
+  getDLQStatistics,
+  getDLQJobById,
+  retryDLQ,
+  deleteDLQ,
+} from "../controllers/dlq.controller.js";
 
 const router = Router();
 
-
 /* Protect all DLQ routes */
-router.use(
-    authenticate,
-    authorize("admin")
-);
+router.use(authenticate, apiRateLimit, authorize("admin"));
 
 /**
  * @swagger

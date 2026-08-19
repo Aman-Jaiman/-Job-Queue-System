@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { login } from "../controllers/auth.controller.js";
+import { loginRateLimit } from "../middleware/rateLimits.js";
 
 const router = Router();
 
@@ -33,6 +34,6 @@ const router = Router();
  *         description: Invalid Credentials
  */
 
-router.post("/login", login);
+router.post("/login", loginRateLimit, login);
 
 export default router;
