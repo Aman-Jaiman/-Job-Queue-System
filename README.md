@@ -157,6 +157,7 @@ Tests require a reachable Redis instance. They use their own BullMQ and rate-lim
 ```bash
 npm test
 npm run lint
+npm run check-env
 ```
 
 The test suite covers authentication and authorization, request IDs, health, rate-limit TTLs and identities, queue administration, worker success/retry/backoff/final failure, DLQ idempotency/retry/delete/lookups, analytics, and monitoring.
@@ -182,11 +183,56 @@ The test suite covers authentication and authorization, request IDs, health, rat
 | `ENABLE_API_DOCS`, `ENABLE_BULL_BOARD`             | No       | Explicitly expose developer/admin UIs; both default to `false` in production. |
 | `LOG_LEVEL`, `SHUTDOWN_TIMEOUT_MS`                 | No       | Log verbosity and process shutdown deadline.                                  |
 
+## Pre-Flight Environment Check
+
+Before deploying to staging or production, run the pre-flight verification tool:
+
+```bash
+npm run check-env
+```
+
+This verifies that all required secrets are provided, `JWT_SECRET` meets production length requirements (minimum 32 characters), `ADMIN_PASSWORD` is a valid bcrypt hash, and network ports are correctly configured.
+
+## CI/CD Pipeline
+
+The repository includes a GitHub Actions workflow in `.github/workflows/ci-cd.yml` that automatically:
+1. Runs ESLint (`npm run lint`).
+2. Validates environment configurations (`npm run check-env`).
+3. Runs integration tests with an ephemeral Redis service container (`npm test`).
+4. Verifies multi-stage production Docker image compilation.
+
 ## Production Deployment
 
-Deploy the API and worker as separate processes/services that share the same managed Redis instance. Run at least one worker before accepting email traffic. Terminate TLS at a reverse proxy or platform edge, configure exact `CORS_ORIGINS`, supply all secrets from the platform secret manager, and keep Swagger/Bull Board disabled unless they are on an authenticated internal network.
+Deploy the API and worker as separate processes/services that share the same managed Redis instance.
 
-For Railway, create separate services from this repository: one with `npm start` and one with `npm run worker`. Attach a managed Redis service or a private external Redis URL through the `REDIS_*` variables. Configure `/health` as the API health check. The standalone scheduler command is idempotent and can be run during deployment; API startup also upserts it.
+### Option 1: Render Infrastructure-as-Code (Blueprint)
+
+This repository includes a `render.yaml` blueprint:
+1. Connect your repository to Render.
+2. Select **New > Blueprint**.
+3. Render automatically provisions the API web service, worker service, and Redis database with built-in health checks and environment mapping.
+
+### Option 2: Production Docker Compose
+
+For containerized environments (AWS EC2, DigitalOcean, VPS):
+
+```bash
+# 1. Prepare environment variables
+cp .env.example .env
+
+# 2. Run pre-flight check
+npm run check-env
+
+# 3. Launch production containers
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+### Option 3: Railway / Fly.io
+
+1. Create two services from this repo:
+   - **API Service**: Start Command `npm start`, Health Check Path `/health`.
+   - **Worker Service**: Start Command `npm run worker`.
+2. Provision a Redis service and pass `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASSWORD` to both services.
 
 Never expose Redis publicly. The production Compose file intentionally omits a Redis host-port mapping.
 
@@ -204,3 +250,4 @@ On `SIGINT` or `SIGTERM`, the API stops accepting HTTP connections, closes both 
 ## License
 
 Licensed under the ISC license declared in `package.json`.
+

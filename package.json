@@ -14,7 +14,8 @@
     "scheduler": "node src/scheduler.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "check-env": "node scripts/check-env.js"
   },
   "keywords": [],
   "author": "Aman Jaiman",

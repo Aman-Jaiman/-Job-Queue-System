@@ -1,0 +1,97 @@
+services:
+  # 1. Express API Web Service
+  - type: web
+    name: job-queue-api
+    runtime: image
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    dockerTarget: production
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  # 2. BullMQ Email Worker Private Service
+  - type: pserv
+    name: job-queue-worker
+    runtime: image
+    dockerContext: .
+    dockerfilePath: Dockerfile
+    dockerTarget: production
+    dockerCommand: npm run worker
+    plan: starter
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: job-queue-redis
+          property: password
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: job-queue-api
+          property: JWT_SECRET
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+
+  # 3. Managed Redis Instance
+  - type: redis
+    name: job-queue-redis
+    plan: starter
+    ipAllowList: [] # internal access only

@@ -7,10 +7,39 @@ services:
     volumes:
       - redis_data:/data
 
-    command: redis-server --appendonly yes
+    command: >
+      sh -c '
+        if [ -n "$REDIS_PASSWORD" ]; then
+          exec redis-server --appendonly yes --requirepass "$REDIS_PASSWORD"
+        else
+          exec redis-server --appendonly yes
+        fi
+      '
+
+    env_file:
+      - .env
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: >
+        sh -c '
+          if [ -n "$REDIS_PASSWORD" ]; then
+            redis-cli -a "$REDIS_PASSWORD" ping
+          else
+            redis-cli ping
+          fi
+        '
       interval: 5s
       timeout: 3s
       retries: 5
@@ -20,6 +49,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
 
     container_name: job-queue-api
     restart: unless-stopped
@@ -43,6 +73,18 @@ services:
 
     command: npm start
 
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 512M
+
     healthcheck:
       test:
         [
@@ -60,6 +102,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: production
 
     container_name: job-queue-worker
     restart: unless-stopped
@@ -79,6 +122,18 @@ services:
       REDIS_PORT: 6379
 
     command: npm run worker
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 512M
 
 volumes:
   redis_data:
