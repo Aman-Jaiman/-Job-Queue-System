@@ -9,7 +9,8 @@ describe("Health Check", () => {
       expect(response.statusCode).toBe(200);
 
       expect(response.body.success).toBe(true);
-      expect(response.body.status).toBe("healthy");
+      expect(response.body.status).toBe("ok");
+      expect(response.body.service).toBe("job-queue-system");
 
       expect(response.body).toHaveProperty("uptime");
       expect(response.body).toHaveProperty("timestamp");

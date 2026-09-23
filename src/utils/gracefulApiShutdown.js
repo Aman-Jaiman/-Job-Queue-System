@@ -31,6 +31,8 @@ const closeServer = (server) =>
 const gracefulApiShutdown = (
   server,
   {
+    worker,
+    waitForBackgroundWork = async () => {},
     queues = [emailQueue, dlqQueue, emailQueueEvents],
     redisClient = redis,
     exit = process.exit,
@@ -43,13 +45,19 @@ const gracefulApiShutdown = (
 
   shutdownPromise = (async () => {
     const timeout = setTimeout(() => {
-      logger.error("API shutdown timed out; forcing exit");
+      logger.error("API graceful shutdown timed out; forcing exit");
       exit(1);
     }, timeoutMs);
 
     try {
       logger.info("API graceful shutdown started");
       await closeServer(server);
+
+      if (worker && typeof worker.close === "function") {
+        await worker.close();
+      }
+
+      await waitForBackgroundWork();
       await Promise.all(queues.map((queue) => queue.close()));
 
       if (redisClient.status !== "end") {

@@ -62,6 +62,13 @@ if (environment === "production" && jwtSecret.length < 32) {
   throw new Error("JWT_SECRET must be at least 32 characters in production");
 }
 
+const redisUrl = optionalString("REDIS_URL");
+const redisHost = optionalString("REDIS_HOST");
+
+if (!redisUrl && !redisHost && environment === "production") {
+  throw new Error("Either REDIS_URL or REDIS_HOST must be provided in production");
+}
+
 const mailUser = requiredString("MAIL_USER");
 
 const config = {
@@ -72,9 +79,11 @@ const config = {
   },
 
   redis: {
-    host: requiredString("REDIS_HOST"),
+    url: redisUrl,
+    host: redisHost || (redisUrl ? undefined : "localhost"),
     port: port("REDIS_PORT", 6379),
     password: optionalString("REDIS_PASSWORD"),
+    tls: boolean("REDIS_TLS", false) || (redisUrl?.startsWith("rediss://") ?? false),
   },
 
   bullmq: {

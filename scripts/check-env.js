@@ -54,9 +54,19 @@ if (adminPassword) {
   }
 }
 
-// 2. Redis Configuration
-checkRequired("REDIS_HOST");
-checkPort("REDIS_PORT", 6379);
+// 2. Redis Configuration (Supports REDIS_URL or REDIS_HOST)
+const redisUrl = process.env.REDIS_URL?.trim();
+const redisHost = process.env.REDIS_HOST?.trim();
+
+if (!redisUrl && !redisHost) {
+  if (env === "production") {
+    errors.push("Either REDIS_URL or REDIS_HOST must be provided in production.");
+  } else {
+    warnings.push("Neither REDIS_URL nor REDIS_HOST is set; defaulting to localhost.");
+  }
+} else if (!redisUrl && redisHost) {
+  checkPort("REDIS_PORT", 6379);
+}
 
 // 3. SMTP Mail Configuration
 checkRequired("MAIL_HOST");

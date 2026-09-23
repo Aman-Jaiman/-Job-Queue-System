@@ -7,20 +7,25 @@ import logger from "./logger.js";
 // This client is reserved for lightweight API infrastructure work such as
 // health checks and rate limiting. BullMQ components own separate connections
 // so closing one API resource cannot interrupt another component's commands.
-const redis = new Redis({
-  host: config.redis.host,
-  port: config.redis.port,
-  password: config.redis.password,
-  // API requests must fail promptly when Redis is unavailable rather than
-  // waiting behind an indefinitely retried command.
+const redisOptions = {
   maxRetriesPerRequest: 1,
   enableReadyCheck: true,
   connectTimeout: 5000,
   retryStrategy: (attempt) => Math.min(attempt * 200, 2000),
-});
+  ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+};
+
+const redis = config.redis.url
+  ? new Redis(config.redis.url, redisOptions)
+  : new Redis({
+      host: config.redis.host,
+      port: config.redis.port,
+      password: config.redis.password,
+      ...redisOptions,
+    });
 
 redis.on("connect", () => {
-  logger.info("Redis TCP connection established");
+  logger.info("[REDIS] Connected");
 });
 
 redis.on("ready", () => {

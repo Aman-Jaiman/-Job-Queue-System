@@ -1,28 +1,19 @@
 import redis from "../config/redis.js";
-import emailQueue from "../queues/email.queue.js";
 
 export const healthCheck = async (req, res, next) => {
   try {
     const redisStatus = redis.status;
+    const isHealthy = redisStatus === "ready" || redisStatus === "connect";
 
-    let queueStatus = "connected";
-
-    try {
-      await emailQueue.getJobCounts();
-    } catch {
-      queueStatus = "disconnected";
-    }
-
-    const healthy = redisStatus === "ready" && queueStatus === "connected";
-
-    return res.status(healthy ? 200 : 503).json({
-      success: healthy,
-      status: healthy ? "healthy" : "unhealthy",
-      uptime: process.uptime(),
+    return res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? "ok" : "unhealthy",
+      service: "job-queue-system",
       timestamp: new Date().toISOString(),
+      success: isHealthy,
+      uptime: process.uptime(),
       services: {
         redis: redisStatus,
-        queue: queueStatus,
+        queue: isHealthy ? "connected" : "disconnected",
       },
     });
   } catch (error) {

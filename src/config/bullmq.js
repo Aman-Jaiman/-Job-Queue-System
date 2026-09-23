@@ -1,17 +1,27 @@
 import config from "./env.js";
 
+const connectionOptions = config.redis.url
+  ? {
+      url: config.redis.url,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+      ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+    }
+  : {
+      host: config.redis.host,
+      port: config.redis.port,
+      password: config.redis.password,
+      maxRetriesPerRequest: null,
+      enableReadyCheck: true,
+      ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+    };
+
 const bullMQConfig = {
   prefix: config.bullmq.prefix,
 
   // BullMQ owns a connection per Queue/Worker. Workers require unlimited
   // command retries because they use blocking Redis operations.
-  connection: {
-    host: config.redis.host,
-    port: config.redis.port,
-    password: config.redis.password,
-    maxRetriesPerRequest: null,
-    enableReadyCheck: true,
-  },
+  connection: connectionOptions,
 
   defaultJobOptions: {
     attempts: 3,

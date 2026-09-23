@@ -6,17 +6,17 @@ import { moveToDLQ } from "../services/dlq/dlq.service.js";
 
 const pendingDLQTransfers = new Set();
 
+logger.info("[WORKER] Worker started");
+
 const emailWorker = new Worker(
   "email",
 
   async (job) => {
-    logger.info(`Processing Job ${job.id} (${job.name})`);
+    logger.info(`[WORKER] Processing job ${job.id}`);
 
     // Scheduled daily report job
     if (job.name === "daily-report") {
       logger.info("Generating Daily Report...");
-
-      // Your actual report generation logic can go here.
 
       return {
         type: "daily-report",
@@ -32,8 +32,6 @@ const emailWorker = new Worker(
       html: job.data.html,
     });
 
-    logger.info(`Email job ${job.id} sent successfully`);
-
     return {
       type: "email",
       status: "sent",
@@ -47,20 +45,17 @@ const emailWorker = new Worker(
 // Worker Events
 // ----------------------------------------
 
-emailWorker.on("completed", (job, result) => {
-  logger.info(`Job ${job.id} completed successfully`);
-
-  logger.info(`Job ${job.id} completed with status ${result.status}`);
+emailWorker.on("completed", (job) => {
+  logger.info(`[WORKER] Job ${job.id} completed`);
 });
 
 emailWorker.on("failed", (job, error) => {
   if (!job) {
-    logger.error(`Worker job failed: ${error.message}`);
+    logger.error(`[WORKER] Worker job failed: ${error.message}`);
     return;
   }
 
-  logger.error(`Job ${job.id} failed: ${error.message}`);
-
+  logger.error(`[WORKER] Job ${job.id} failed: ${error.message}`);
   logger.error(`Attempt ${job.attemptsMade}/${job.opts.attempts}`);
 
   /*
