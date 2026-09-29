@@ -91,7 +91,7 @@ flowchart LR
 
 - `POST /api/auth/login`: checks the one configured admin email and bcrypt hash; returns a signed JWT on success.
 - Operational `/api/jobs`, `/api/queue`, `/api/dlq`, `/api/analytics`, and `/api/monitor`: JWT authentication, API rate limit, and `admin` role authorization. Email creation has its separate limit. `GET /health` is public.
-- `GET /health`: returns Redis client status, uptime, timestamp, and a queue status derived from that same Redis status. It does not independently ping a BullMQ queue.
+- `GET /health`: pings Redis and reads BullMQ queue counts, then returns dependency status, uptime, and timestamp. It does not check worker liveness or SMTP connectivity.
 - Production static serving: API routes are registered first. Unknown `/api/*` requests go to the API 404/error path before static middleware. Express then serves files from `client/dist`; unmatched HTML requests fall back to `index.html` for React Router deep links. In non-production mode, `/` returns a small API-running JSON response and Vite serves the UI separately.
 
 ### API endpoint map
@@ -268,7 +268,7 @@ The checked-in Jest suite is Redis-backed backend integration coverage using Sup
 **9. What does the health endpoint actually check?**
 
 - **Tests:** Do you inspect implementation rather than repeat dashboard labels?
-- **Answer:** “It reports the ioredis client's current status. The `queue` field is derived from that same status; it does not run a BullMQ readiness check or a fresh Redis ping inside the handler. Startup separately waits for queue and worker readiness.”
+- **Answer:** “It pings Redis and reads queue counts through BullMQ, so a healthy response verifies both Redis and queue access. It does not prove that the SMTP provider is reachable or that the worker is making progress. Startup separately waits for queue and worker readiness.”
 - **Code:** [health.controller.js](../src/controllers/health.controller.js), [server.js](../server.js).
 
 ### Advanced
@@ -314,7 +314,7 @@ The checked-in Jest suite is Redis-backed backend integration coverage using Sup
 **16. The UI says the worker is healthy, but emails are stuck. What is the limitation?**
 
 - **Tests:** Can you tell displayed process metrics from worker health?
-- **Answer:** “`/api/monitor` reports queue counts, the current Node process PID/memory/uptime, and Redis client status. Those process values are not BullMQ worker concurrency or liveness metrics, and the health route doesn't probe queue readiness. I'd expose BullMQ worker status, active/failed/stalled counts and dependency probes separately.”
+- **Answer:** “`/api/monitor` reports queue counts, the current Node process PID/memory/uptime, and Redis client status. Those process values are not BullMQ worker concurrency or liveness metrics; `/health` verifies Redis and queue access but not worker progress. I'd expose BullMQ worker status and dependency probes separately.”
 - **Code:** [monitor.controller.js](../src/controllers/monitor.controller.js), [monitor.service.js](../src/services/monitor/monitor.service.js), [health.controller.js](../src/controllers/health.controller.js).
 
 **17. Why might an authenticated dashboard start returning 429s under load?**
@@ -505,7 +505,7 @@ Run `npm run check-env` before deployment. It validates required values, ports, 
 - **Operational controls are destructive:** `drain()` removes waiting/delayed jobs but leaves active jobs; verify this distinction before describing “empty queue.”
 - **One admin account shapes the whole security/scaling model:** credentials, rate-limit identity, and permissions are global rather than user/tenant based.
 - **Production routes need ordering:** APIs must precede SPA fallback or unknown API calls can return `index.html`, hiding useful 404s.
-- **Health is not full readiness:** the current health handler checks ioredis status only; queue/worker/SMTP readiness deserves separate signals.
+- **Health is not full readiness:** `/health` pings Redis and reads BullMQ counts, but worker progress and SMTP reachability need separate signals.
 - **Graceful shutdown must cover async side work:** pending DLQ transfers are tracked in a process-local Set and awaited on shutdown, but cannot survive process death.
 
 ## 15. Questions You Should Ask Yourself Before the Interview
@@ -547,7 +547,7 @@ Be ready to explain, without overstating:
 15. Rate limiting combines `INCR` and first `EXPIRE` in one Lua script.
 16. Rate-limit Redis errors fail closed with `503`.
 17. Rate-limit keys use a SHA-256 hash of email/IP; hashing is not encryption.
-18. Public `GET /health` checks Redis client status; its queue field is derived from that status.
+18. Public `GET /health` pings Redis and reads BullMQ counts; it does not establish worker progress or SMTP reachability.
 19. `/api/monitor` reports the current process, not aggregate worker fleet metrics.
 20. Analytics are computed from retained queue counts and are not historical rates.
 21. Dashboard/job/worker pages poll periodically; one shared admin identity can exhaust the shared API rate limit.

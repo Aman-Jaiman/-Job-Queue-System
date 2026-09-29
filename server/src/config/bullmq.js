@@ -5,7 +5,7 @@ const connectionOptions = config.redis.url
       url: config.redis.url,
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
-      ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+      ...(config.redis.tls ? { tls: {} } : {}),
     }
   : {
       host: config.redis.host,
@@ -13,7 +13,7 @@ const connectionOptions = config.redis.url
       password: config.redis.password,
       maxRetriesPerRequest: null,
       enableReadyCheck: true,
-      ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+      ...(config.redis.tls ? { tls: {} } : {}),
     };
 
 const bullMQConfig = {

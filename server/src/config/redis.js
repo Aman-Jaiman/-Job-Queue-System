@@ -12,7 +12,7 @@ const redisOptions = {
   enableReadyCheck: true,
   connectTimeout: 5000,
   retryStrategy: (attempt) => Math.min(attempt * 200, 2000),
-  ...(config.redis.tls ? { tls: { rejectUnauthorized: false } } : {}),
+  ...(config.redis.tls ? { tls: {} } : {}),
 };
 
 const redis = config.redis.url
