@@ -2,7 +2,7 @@
 
 ## Overview
 
-This service accepts email delivery requests, persists them in Redis through BullMQ, and processes them in a separate worker. Moving slow, unreliable SMTP work out of the request path keeps the API responsive and gives failed work a controlled retry and Dead Letter Queue (DLQ) lifecycle.
+This service accepts email delivery requests, persists them in Redis through BullMQ, and processes them in a background worker. Moving slow, unreliable SMTP work out of the request path keeps the API responsive and gives failed work a controlled retry and Dead Letter Queue (DLQ) lifecycle.
 
 ## Architecture
 
@@ -24,7 +24,7 @@ flowchart LR
 - JWT authentication with an admin role; email submission and all operational routes require a token.
 - Redis-backed, atomic fixed-window rate limits for login, email creation, and administrative endpoints.
 - BullMQ email queue with three attempts, exponential backoff starting at two seconds, and bounded job retention.
-- Separate worker process with graceful shutdown and final-failure DLQ handling.
+- Background worker with graceful shutdown and final-failure DLQ handling.
 - Deterministic DLQ IDs prevent duplicate records; deterministic retry IDs prevent concurrent DLQ retries from duplicating work.
 - Daily report job scheduler, configurable by cron expression and timezone. The current report handler is deliberately a placeholder that records a generated result—it does not generate or email a report yet.
 - Admin queue controls, job inspection/retry, DLQ management, analytics, monitoring, health checks, Swagger UI, and Bull Board.
@@ -37,17 +37,34 @@ Node.js, Express 5, BullMQ, Redis, Nodemailer, JWT, bcrypt, Zod, Winston, Jest, 
 ## Project Structure
 
 ```text
-src/
-  config/        Environment, Redis, BullMQ, mail, and logging configuration
-  controllers/   HTTP response orchestration
-  middleware/    Authentication, authorization, validation, rate limits, errors
-  queues/        Email and dead-letter BullMQ queues
-  services/      Authentication, email, DLQ, jobs, analytics, and monitoring logic
-  workers/       Background email processor
-  schedulers/    Persistent BullMQ job-scheduler setup
-  routes/        HTTP endpoints and OpenAPI annotations
-test/            Redis-backed integration and worker lifecycle tests
+client/
+  src/
+    components/  Shared dashboard layout and UI components
+    config/      Frontend configuration
+    context/     Authentication state
+    pages/       Login, dashboard, jobs, and operations screens
+    services/    API client
+server/
+  docs/          Interview preparation guide
+  scripts/       Environment and deployment checks
+  src/
+    config/      Environment, Redis, BullMQ, mail, and logging configuration
+    controllers/ HTTP response orchestration
+    middleware/  Authentication, authorization, validation, rate limits, errors
+    queues/      Email and dead-letter BullMQ queues
+    routes/      HTTP endpoints and OpenAPI annotations
+    schedulers/  Persistent BullMQ job-scheduler setup
+    services/    Authentication, email, DLQ, jobs, analytics, and monitoring logic
+    workers/     Background email processor
+  test/          Redis-backed integration and worker lifecycle tests
+  server.js      Express application entry point
 ```
+
+The root contains the shared npm workspace and deployment configuration. The
+Express server serves the production dashboard from `client/dist`; API paths
+remain under `/api`.
+
+For an implementation-based interview walkthrough, see the [interview preparation guide](server/docs/INTERVIEW_PREPARATION.md).
 
 ## How It Works
 
@@ -145,10 +162,14 @@ docker compose -f docker-compose.prod.yml up --build
 1. Copy `.env.example` to `.env` and replace all placeholder secrets.
 2. Start Redis, for example `docker compose up redis`.
 3. Install dependencies with `npm ci`.
-4. Start the API: `npm run dev`.
-5. In a second terminal, start the worker: `npm run worker`.
+4. Start the API and background worker together: `npm run dev`.
+5. In a second terminal, start the dashboard: `npm run dev --workspace client`.
 
-The API configures the persistent daily report scheduler on startup. `npm run scheduler` is also available to upsert that schedule as a standalone deployment/bootstrap command.
+The API configures the persistent daily report scheduler on startup. For a
+single-server production deployment, run `npm ci`, `npm run build`, then
+`npm start`. The build command creates `client/dist`; the start command serves
+that build and runs the API, worker, and scheduler together. `npm run worker`
+and `npm run scheduler` remain available for standalone processes.
 
 ## Testing
 
@@ -203,14 +224,14 @@ The repository includes a GitHub Actions workflow in `.github/workflows/ci-cd.ym
 
 ## Production Deployment
 
-Deploy the API and worker as separate processes/services that share the same managed Redis instance.
+Deploy one web process that serves the dashboard and runs the API plus background worker; Redis remains a separate managed service.
 
 ### Option 1: Render Infrastructure-as-Code (Blueprint)
 
 This repository includes a `render.yaml` blueprint:
 1. Connect your repository to Render.
 2. Select **New > Blueprint**.
-3. Render automatically provisions the API web service, worker service, and Redis database with built-in health checks and environment mapping.
+3. Render automatically provisions the API web service and Redis database with built-in health checks and environment mapping.
 
 ### Option 2: Production Docker Compose
 
@@ -229,10 +250,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ### Option 3: Railway / Fly.io
 
-1. Create two services from this repo:
-   - **API Service**: Start Command `npm start`, Health Check Path `/health`.
-   - **Worker Service**: Start Command `npm run worker`.
-2. Provision a Redis service and pass `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASSWORD` to both services.
+1. Create one web service from this repo with build command `npm ci && npm run build` and start command `npm start`; use `/health` as its health check.
+2. Provision a Redis service and pass `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASSWORD` to the web service.
 
 Never expose Redis publicly. The production Compose file intentionally omits a Redis host-port mapping.
 

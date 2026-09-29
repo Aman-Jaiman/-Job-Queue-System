@@ -98,42 +98,5 @@ services:
       retries: 5
       start_period: 10s
 
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-
-    container_name: job-queue-worker
-    restart: unless-stopped
-    init: true
-    stop_grace_period: 35s
-
-    depends_on:
-      redis:
-        condition: service_healthy
-
-    env_file:
-      - .env
-
-    environment:
-      NODE_ENV: production
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-
-    command: npm run worker
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-    deploy:
-      resources:
-        limits:
-          cpus: "1.5"
-          memory: 512M
-
 volumes:
   redis_data:

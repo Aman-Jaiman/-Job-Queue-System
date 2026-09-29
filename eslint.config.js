@@ -1,6 +1,6 @@
 export default [
   {
-    ignores: ["node_modules/**", "coverage/**", "build/**", "dist/**"],
+    ignores: ["node_modules/**", "coverage/**", "build/**", "**/dist/**"],
   },
   {
     files: ["**/*.js"],
@@ -30,7 +30,7 @@ export default [
     },
   },
   {
-    files: ["test/**/*.js"],
+    files: ["server/test/**/*.js"],
     languageOptions: {
       globals: {
         afterAll: "readonly",
@@ -40,6 +40,14 @@ export default [
         expect: "readonly",
         jest: "readonly",
         test: "readonly",
+      },
+    },
+  },
+  {
+    files: ["client/src/**/*.js"],
+    languageOptions: {
+      globals: {
+        localStorage: "readonly",
       },
     },
   },

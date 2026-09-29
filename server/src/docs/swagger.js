@@ -1,5 +1,11 @@
 import swaggerJsdoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const routeFiles = path
+  .resolve(path.dirname(fileURLToPath(import.meta.url)), "../routes/*.js")
+  .replaceAll("\\", "/");
 
 const options = {
   definition: {
@@ -22,7 +28,7 @@ const options = {
     },
   },
 
-  apis: ["./src/routes/*.js"],
+  apis: [routeFiles],
 };
 
 const specs = swaggerJsdoc(options);

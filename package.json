@@ -1,21 +1,25 @@
 {
   "name": "job-queue-system",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "server/server.js",
   "type": "module",
+  "workspaces": [
+    "client"
+  ],
   "directories": {
-    "doc": "docs",
-    "test": "tests"
+    "doc": "server/src/docs",
+    "test": "server/test"
   },
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js",
-    "worker": "node src/worker.js",
-    "scheduler": "node src/scheduler.js",
+    "dev": "nodemon server/server.js",
+    "start": "node server/server.js",
+    "build": "npm run build --workspace client",
+    "worker": "node server/src/worker.js",
+    "scheduler": "node server/src/scheduler.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --detectOpenHandles",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "check-env": "node scripts/check-env.js"
+    "check-env": "node server/scripts/check-env.js"
   },
   "keywords": [],
   "author": "Aman Jaiman",

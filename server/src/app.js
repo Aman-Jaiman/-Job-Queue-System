@@ -1,4 +1,6 @@
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import helmet from "helmet";
 import cors from "cors";
 import compression from "compression";
@@ -34,6 +36,10 @@ import errorHandler from "./middleware/errorHandler.js";
 import requestId from "./middleware/requestId.middleware.js";
 
 const app = express();
+const clientDistPath = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../client/dist",
+);
 
 /* ========================================
  * TRUST PROXY
@@ -146,22 +152,28 @@ app.use("/api/analytics", analyticsRoutes);
 
 app.use("/api/monitor", monitorRoutes);
 
-/* ========================================
- * ROOT ROUTE
- * ======================================== */
+if (config.environment === "production") {
+  app.use("/api", notFound);
+  app.use(express.static(clientDistPath));
+  app.get("/{*path}", (req, res, next) => {
+    if (!req.accepts("html")) {
+      return next();
+    }
 
-app.get("/", (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: "Job Queue System API Running",
+    return res.sendFile(path.join(clientDistPath, "index.html"), (error) => {
+      if (error) {
+        next(error);
+      }
+    });
   });
-});
-
-/* ========================================
- * 404 HANDLER
- * ======================================== */
-
-// MUST be after all routes.
+} else {
+  app.get("/", (req, res) => {
+    return res.status(200).json({
+      success: true,
+      message: "Job Queue System API Running",
+    });
+  });
+}
 
 app.use(notFound);
 
